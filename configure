@@ -523,6 +523,7 @@ fi
 test "$cc_family" = clang && tryflag CFLAGS_AUTO -w
 
 tryflag CFLAGS_AUTO -Wno-pointer-to-int-cast
+tryflag CFLAGS_AUTO -Wno-string-plus-int
 
 #
 # Even with -std=c99, gcc accepts some constructs which are constraint
