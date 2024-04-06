@@ -220,7 +220,7 @@ tmpc="./conf$$-$PPID-$i.c"
 test "$i" -gt 50 && fail "$0: cannot create temporary file $tmpc"
 done
 set +C
-trap 'rm "$tmpc"' EXIT INT QUIT TERM HUP
+trap 'rm -f "$tmpc"; exit 127' EXIT INT QUIT TERM HUP
 
 #
 # Check that the requested malloc implementation exists
