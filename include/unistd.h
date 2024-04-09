@@ -472,6 +472,16 @@ pid_t gettid(void);
 #define _CS_POSIX_V7_THREADS_CFLAGS	1150
 #define _CS_POSIX_V7_THREADS_LDFLAGS	1151
 
+/* Used to retry syscalls that can return EINTR. */
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(exp) ({		\
+    __typeof__(exp) _rc;			\
+    do {					\
+        _rc = (exp);				\
+    } while (_rc == -1 && errno == EINTR);	\
+    _rc; })
+#endif
+
 #ifdef __cplusplus
 }
 #endif
