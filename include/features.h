@@ -37,4 +37,10 @@
 
 #define __REDIR(x,y) __typeof__(x) x __asm__(#y)
 
+/**
+ * Non-standard -- allows for feature testing.
+ */
+#undef __MUSL__
+#define __MUSL__ 1
+
 #endif
