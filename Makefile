@@ -74,6 +74,7 @@ WRAPCC_GCC = gcc
 WRAPCC_CLANG = clang
 
 LDSO_PATHNAME = $(syslibdir)/ld-musl-$(ARCH)$(SUBARCH).so.1
+LIBC_SONAME = libc.musl-$(ARCH)$(SUBARCH).so.1
 
 -include config.mak
 -include $(srcdir)/arch/$(ARCH)/arch.mak
@@ -114,6 +115,8 @@ obj/crt/crt1.o obj/crt/scrt1.o obj/crt/rcrt1.o obj/ldso/dlstart.lo: $(srcdir)/ar
 obj/crt/rcrt1.o: $(srcdir)/ldso/dlstart.c
 
 obj/crt/Scrt1.o obj/crt/rcrt1.o: CFLAGS_ALL += -fPIC
+
+obj/ldso/dynlink.lo: CFLAGS_ALL += -DLIBC_SONAME=\"$(LIBC_SONAME)\"
 
 OPTIMIZE_SRCS = $(wildcard $(OPTIMIZE_GLOBS:%=$(srcdir)/src/%))
 $(OPTIMIZE_SRCS:$(srcdir)/%.c=obj/%.o) $(OPTIMIZE_SRCS:$(srcdir)/%.c=obj/%.lo): CFLAGS += -O3

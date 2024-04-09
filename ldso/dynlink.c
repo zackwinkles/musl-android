@@ -30,6 +30,9 @@ static size_t ldso_page_size;
 
 #include "libc.h"
 
+#define STRINGIFY(x) __STRINGIFY(x)
+#define __STRINGIFY(x) #x
+
 #define malloc __libc_malloc
 #define calloc __libc_calloc
 #define realloc __libc_realloc
@@ -68,6 +71,8 @@ struct dso {
 	size_t *dynv;
 	struct dso *next, *prev;
 
+	int elfmachine;
+	int elfclass;
 	Phdr *phdr;
 	int phnum;
 	size_t phentsize;
@@ -156,6 +161,7 @@ static struct fdpic_loadmap *app_loadmap;
 static struct fdpic_dummy_loadmap app_dummy_loadmap;
 
 struct debug *_dl_debug_addr = &debug;
+static void (*exe_dl_debug_state)(void) = 0;
 
 extern weak hidden char __ehdr_start[];
 
@@ -457,7 +463,7 @@ static void do_relocs(struct dso *dso, size_t *rel, size_t rel_size, size_t stri
 		tls_val = def.sym ? def.sym->st_value : 0;
 
 		if ((type == REL_TPOFF || type == REL_TPOFF_NEG)
-		    && def.dso->tls_id > static_tls_cnt) {
+		    && def.dso && def.dso->tls_id > static_tls_cnt) {
 			error("Error relocating %s: %s: initial-exec TLS "
 				"resolves to dynamic definition in %s",
 				dso->name, name, def.dso->name);
@@ -506,14 +512,14 @@ static void do_relocs(struct dso *dso, size_t *rel, size_t rel_size, size_t stri
 			break;
 #ifdef TLS_ABOVE_TP
 		case REL_TPOFF:
-			*reloc_addr = tls_val + def.dso->tls.offset + TPOFF_K + addend;
+			*reloc_addr = (def.dso ? tls_val + def.dso->tls.offset + TPOFF_K : 0) + addend;
 			break;
 #else
 		case REL_TPOFF:
-			*reloc_addr = tls_val - def.dso->tls.offset + addend;
+			*reloc_addr = (def.dso ? tls_val - def.dso->tls.offset : 0) + addend;
 			break;
 		case REL_TPOFF_NEG:
-			*reloc_addr = def.dso->tls.offset - tls_val + addend;
+			*reloc_addr = (def.dso ? def.dso->tls.offset - tls_val : 0) + addend;
 			break;
 #endif
 		case REL_TLSDESC:
@@ -684,6 +690,19 @@ static void unmap_library(struct dso *dso)
 	}
 }
 
+static int verify_elf_magic(const Ehdr* eh) {
+	return eh->e_ident[0] == ELFMAG0 &&
+		eh->e_ident[1] == ELFMAG1 &&
+		eh->e_ident[2] == ELFMAG2 &&
+		eh->e_ident[3] == ELFMAG3;
+}
+
+/* Verifies that an elf header's machine and class match the loader */
+static int verify_elf_arch(const Ehdr* eh) {
+	return eh->e_machine == ldso.elfmachine &&
+		eh->e_ident[EI_CLASS] == ldso.elfclass;
+}
+
 static void *map_library(int fd, struct dso *dso)
 {
 	Ehdr buf[(896+sizeof(Ehdr))/sizeof(Ehdr)];
@@ -706,6 +725,10 @@ static void *map_library(int fd, struct dso *dso)
 	if (l<0) return 0;
 	if (l<sizeof *eh || (eh->e_type != ET_DYN && eh->e_type != ET_EXEC))
 		goto noexec;
+	if (!verify_elf_magic(eh)) goto noexec;
+	if (!verify_elf_arch(eh)) goto noexec;
+	dso->elfmachine = eh->e_machine;
+	dso->elfclass = eh->e_ident[EI_CLASS];
 	phsize = eh->e_phentsize * eh->e_phnum;
 	if (phsize > sizeof buf - sizeof *eh) {
 		allocated_buf = malloc(phsize);
@@ -870,29 +893,53 @@ error:
 	return 0;
 }
 
-static int path_open(const char *name, const char *s, char *buf, size_t buf_size)
+static int path_open_library(const char *name, const char *s, char *buf, size_t buf_size)
 {
 	size_t l;
 	int fd;
+	const char *p;
 	for (;;) {
 		s += strspn(s, ":\n");
+		p = s;
 		l = strcspn(s, ":\n");
 		if (l-1 >= INT_MAX) return -1;
-		if (snprintf(buf, buf_size, "%.*s/%s", (int)l, s, name) < buf_size) {
-			if ((fd = open(buf, O_RDONLY|O_CLOEXEC))>=0) return fd;
-			switch (errno) {
-			case ENOENT:
-			case ENOTDIR:
-			case EACCES:
-			case ENAMETOOLONG:
-				break;
-			default:
-				/* Any negative value but -1 will inhibit
-				 * futher path search. */
+		s += l;
+		if (snprintf(buf, buf_size, "%.*s/%s", (int)l, p, name) < buf_size) {
+			fd = open(buf, O_RDONLY|O_CLOEXEC);
+			if (fd < 0) {
+				switch (errno) {
+				case ENOENT:
+				case ENOTDIR:
+				case EACCES:
+				case ENAMETOOLONG:
+					/* Keep searching in path list. */
+					continue;
+				default:
+					/* Any negative value but -1 will
+					 * inhibit further path search in
+					 * load_library. */
+					return -2;
+				}
+			}
+			Ehdr eh;
+			ssize_t n = pread(fd, &eh, sizeof eh, 0);
+			/* If the elf file is invalid return -2 to inhibit
+			 * further path search in load_library. */
+			if (n < 0 ||
+			    n != sizeof eh ||
+			    !verify_elf_magic(&eh)) {
+				close(fd);
 				return -2;
 			}
+			/* If the elf file has a valid header but is for the
+			 * wrong architecture ignore it and keep searching the
+			 * path list. */
+			if (!verify_elf_arch(&eh)) {
+				close(fd);
+				continue;
+			}
+			return fd;
 		}
-		s += l;
 	}
 }
 
@@ -1072,7 +1119,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	/* Catch and block attempts to reload the implementation itself */
 	if (name[0]=='l' && name[1]=='i' && name[2]=='b') {
 		static const char reserved[] =
-			"c.pthread.rt.m.dl.util.xnet.";
+			"c.c_musl.pthread.rt.m.dl.util.xnet.";
 		const char *rp, *next;
 		for (rp=reserved; *rp; rp=next) {
 			next = strchr(rp, '.') + 1;
@@ -1116,12 +1163,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		}
 		if (strlen(name) > NAME_MAX) return 0;
 		fd = -1;
-		if (env_path) fd = path_open(name, env_path, buf, sizeof buf);
+		if (env_path) fd = path_open_library(name, env_path, buf, sizeof buf);
 		for (p=needed_by; fd == -1 && p; p=p->needed_by) {
 			if (fixup_rpath(p, buf, sizeof buf) < 0)
 				fd = -2; /* Inhibit further search. */
 			if (p->rpath)
-				fd = path_open(name, p->rpath, buf, sizeof buf);
+				fd = path_open_library(name, p->rpath, buf, sizeof buf);
 		}
 		if (fd == -1) {
 			if (!sys_path) {
@@ -1160,7 +1207,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 				}
 			}
 			if (!sys_path) sys_path = "/lib:/usr/local/lib:/usr/lib";
-			fd = path_open(name, sys_path, buf, sizeof buf);
+			fd = path_open_library(name, sys_path, buf, sizeof buf);
 		}
 		pathname = buf;
 	}
@@ -1192,7 +1239,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	if (find_sym(&temp_dso, "__libc_start_main", 1).sym &&
 	    find_sym(&temp_dso, "stdin", 1).sym) {
 		unmap_library(&temp_dso);
-		return load_library("libc.so", needed_by);
+		return load_library(STRINGIFY(LIBC_SONAME), needed_by);
 	}
 	/* Past this point, if we haven't reached runtime yet, ldso has
 	 * committed either to use the mapped library or to abort execution.
@@ -1626,6 +1673,8 @@ void __libc_start_init(void)
 
 static void dl_debug_state(void)
 {
+	if (exe_dl_debug_state)
+		exe_dl_debug_state();
 }
 
 weak_alias(dl_debug_state, _dl_debug_state);
@@ -1728,10 +1777,12 @@ hidden void __dls2(unsigned char *base, size_t *sp)
 		ldso.base = base;
 	}
 	Ehdr *ehdr = __ehdr_start ? (void *)__ehdr_start : (void *)ldso.base;
-	ldso.name = ldso.shortname = "libc.so";
+	ldso.name = ldso.shortname = STRINGIFY(LIBC_SONAME);
 	ldso.phnum = ehdr->e_phnum;
 	ldso.phdr = laddr(&ldso, ehdr->e_phoff);
 	ldso.phentsize = ehdr->e_phentsize;
+	ldso.elfmachine = ehdr->e_machine;
+	ldso.elfclass = ehdr->e_ident[EI_CLASS];
 	search_vec(auxv, &ldso_page_size, AT_PAGESZ);
 	kernel_mapped_dso(&ldso);
 	decode_dyn(&ldso);
@@ -2055,6 +2106,12 @@ void __dls3(size_t *sp, size_t *auxv)
 		__malloc_replaced = 1;
 	if (find_sym(head, "aligned_alloc", 1).dso != &ldso)
 		__aligned_alloc_replaced = 1;
+
+	/* Determine if another DSO is providing the _dl_debug_state symbol
+	 * and forward calls to it. */
+	struct symdef debug_sym = find_sym(head, "_dl_debug_state", 1);
+	if (debug_sym.dso != &ldso)
+		exe_dl_debug_state = (void (*)(void))laddr(debug_sym.dso, debug_sym.sym->st_value);
 
 	/* Switch to runtime mode: any further failures in the dynamic
 	 * linker are a reportable failure rather than a fatal startup
