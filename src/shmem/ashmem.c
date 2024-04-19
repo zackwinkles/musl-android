@@ -9,18 +9,45 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/ioctl.h>
+#include <sys/shm.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <paths.h>
 #include <features.h>
 
-#define __u32 uint32_t
+//#define __u32 uint32_t
 
-#include "linux/ashmem.h"
-#include <sys/shm.h>
+#define ASHMEM_NAME_LEN 256
+#define ASHMEM_NAME_DEF "dev/ashmem"
+#define ASHMEM_NOT_PURGED 0
+#define ASHMEM_WAS_PURGED 1
+#define ASHMEM_IS_UNPINNED 0
+#define ASHMEM_IS_PINNED 1
+struct ashmem_pin {
+  uint32_t offset;
+  uint32_t len;
+};
+#define __ASHMEMIOC 0x77
+#define ASHMEM_SET_NAME _IOW(__ASHMEMIOC, 1, char[ASHMEM_NAME_LEN])
+#define ASHMEM_GET_NAME _IOR(__ASHMEMIOC, 2, char[ASHMEM_NAME_LEN])
+#define ASHMEM_SET_SIZE _IOW(__ASHMEMIOC, 3, size_t)
+#define ASHMEM_GET_SIZE _IO(__ASHMEMIOC, 4)
+#define ASHMEM_SET_PROT_MASK _IOW(__ASHMEMIOC, 5, unsigned long)
+#define ASHMEM_GET_PROT_MASK _IO(__ASHMEMIOC, 6)
+#define ASHMEM_PIN _IOW(__ASHMEMIOC, 7, struct ashmem_pin)
+#define ASHMEM_UNPIN _IOW(__ASHMEMIOC, 8, struct ashmem_pin)
+#define ASHMEM_GET_PIN_STATUS _IO(__ASHMEMIOC, 9)
+#define ASHMEM_PURGE_ALL_CACHES _IO(__ASHMEMIOC, 10)
+#define ASHMEM_GET_FILE_ID _IOR(__ASHMEMIOC, 11, unsigned long)
 
+#if defined(DEBUG)
+#define DBG(fmt, ...) do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+                                __LINE__, __func__, __VA_ARGS__); } while (0)
 //#define DBG(...) __android_log_print(ANDROID_LOG_INFO, "shmem", __VA_ARGS__)
-#define DBG
+#else
+#define DBG(...) do {} while(0)
+#endif
 
 #define ASHV_KEY_SYMLINK_PATH _PATH_TMP "ashv_key_%d"
 #define ANDROID_SHMEM_SOCKNAME "/dev/shm/%08x"
