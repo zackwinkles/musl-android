@@ -1,9 +1,15 @@
 #include "pwf.h"
+#include "android.h"
 #include <pthread.h>
 
 #define FIX(x) (pw->pw_##x = pw->pw_##x-line+buf)
 
-static int getpw_r(const char *name, uid_t uid, struct passwd *pw, char *buf, size_t size, struct passwd **res)
+/**
+ * getpw_r
+ */
+static int
+getpw_r(const char *name, uid_t uid, struct passwd *pw,
+        char *buf, size_t size, struct passwd **res)
 {
 	char *line = 0;
 	size_t len = 0;
@@ -31,12 +37,29 @@ static int getpw_r(const char *name, uid_t uid, struct passwd *pw, char *buf, si
 	return rv;
 }
 
-int getpwnam_r(const char *name, struct passwd *pw, char *buf, size_t size, struct passwd **res)
+int getpwnam_r(const char *name, struct passwd *pw, char *buf,
+               size_t size, struct passwd **res)
 {
+#if defined(__ANDROID__)
+	int ret = getpw_r(name, 0, pw, buf, size, res);
+	if (ret != 0) return ret;
+	__android_setup_pwd(pw);
+	return 0;
+#else
 	return getpw_r(name, 0, pw, buf, size, res);
+#endif
 }
 
-int getpwuid_r(uid_t uid, struct passwd *pw, char *buf, size_t size, struct passwd **res)
+int getpwuid_r(uid_t uid, struct passwd *pw, char *buf,
+               size_t size, struct passwd **res)
 {
+#if defined(__ANDROID__)
+	int ret = getpw_r(0, uid, pw, buf, size, res);
+	if (ret != 0) return ret;
+	__android_setup_pwd(pw);
+	return 0;
+#else
 	return getpw_r(0, uid, pw, buf, size, res);
+#endif
 }
+
