@@ -6,6 +6,8 @@
 config.mak
 lib/musl-gcc.specs
 /obj/
+/lib/
+/*.c
 
 *~
 *.bak
