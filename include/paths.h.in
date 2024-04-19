@@ -36,3 +36,4 @@
 /** Program run state temporary storage. */
 #define _PATH_VARRUN "__HOMEDIR__/.local/state/run/"
 
+#endif
