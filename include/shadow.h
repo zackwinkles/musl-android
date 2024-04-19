@@ -34,9 +34,6 @@ int putspent(const struct spwd *, FILE *);
 struct spwd *getspnam(const char *);
 int getspnam_r(const char *, struct spwd *, char *, size_t, struct spwd **);
 
-int lckpwdf(void);
-int ulckpwdf(void);
-
 #ifdef __cplusplus
 }
 #endif
