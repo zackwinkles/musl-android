@@ -1,6 +1,5 @@
 #include <pwd.h>
 #include <grp.h>
-#include <shadow.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
