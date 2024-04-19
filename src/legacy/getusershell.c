@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static const char defshells[] = "/bin/sh\n/bin/csh\n";
+static const char defshells[] = "/system/bin/sh\n";
 
 static char *line;
 static size_t linesize;
@@ -16,7 +16,7 @@ void endusershell(void)
 
 void setusershell(void)
 {
-	if (!f) f = fopen("/etc/shells", "rbe");
+	if (!f) f = fopen("/system/etc/shells", "rbe");
 	if (!f) f = fmemopen((void *)defshells, sizeof defshells - 1, "rb");
 }
 

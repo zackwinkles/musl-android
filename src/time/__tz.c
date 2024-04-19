@@ -130,10 +130,10 @@ static void do_tzset()
 	const unsigned char *map = 0;
 	size_t i;
 	static const char search[] =
-		"/usr/share/zoneinfo/\0/share/zoneinfo/\0/etc/zoneinfo/\0";
+		"/system/usr/share/zoneinfo/\0/system/etc/zoneinfo/\0";
 
 	s = getenv("TZ");
-	if (!s) s = "/etc/localtime";
+	if (!s) s = "/system/etc/localtime";
 	if (!*s) s = __utc;
 
 	if (old_tz && !strcmp(s, old_tz)) return;
@@ -172,7 +172,7 @@ static void do_tzset()
 	if (!posix_form) {
 		if (*s == ':') s++;
 		if (*s == '/' || *s == '.') {
-			if (!libc.secure || !strcmp(s, "/etc/localtime"))
+			if (!libc.secure || !strcmp(s, "/system/etc/localtime"))
 				map = __map_file(s, &map_size);
 		} else {
 			size_t l = strlen(s);

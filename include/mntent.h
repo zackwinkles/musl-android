@@ -8,7 +8,7 @@ extern "C" {
 #define __NEED_FILE
 #include <bits/alltypes.h>
 
-#define MOUNTED "/etc/mtab"
+#define MOUNTED "/proc/mounts"
 
 #define MNTTYPE_IGNORE	"ignore"
 #define MNTTYPE_NFS	"nfs"

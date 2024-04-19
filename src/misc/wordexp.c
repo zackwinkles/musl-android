@@ -108,7 +108,7 @@ static int do_wordexp(const char *s, wordexp_t *we, int flags)
 	if (!pid) {
 		if (p[1] == 1) fcntl(1, F_SETFD, 0);
 		else dup2(p[1], 1);
-		execl("/bin/sh", "sh", "-c",
+		execl("/system/bin/sh", "sh", "-c",
 			"eval \"printf %s\\\\\\\\0 x $1 $2\"",
 			"sh", s, redir, (char *)0);
 		_exit(1);
