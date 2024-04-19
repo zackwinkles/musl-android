@@ -1,15 +1,11 @@
 #include "pwf.h"
 #include "android.h"
 #include <pthread.h>
+#include <unistd.h>
 
 #define FIX(x) (pw->pw_##x = pw->pw_##x-line+buf)
 
-/**
- * getpw_r
- */
-static int
-getpw_r(const char *name, uid_t uid, struct passwd *pw,
-        char *buf, size_t size, struct passwd **res)
+static int getpw_r(const char *name, uid_t uid, struct passwd *pw, char *buf, size_t size, struct passwd **res)
 {
 	char *line = 0;
 	size_t len = 0;

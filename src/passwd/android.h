@@ -1,6 +1,6 @@
 #include <features.h>
 
-//int access (const char *, int);
+int access (const char *, int);
 
 hidden static void
 __android_setup_pwd (struct passwd * pw) {
@@ -9,6 +9,8 @@ __android_setup_pwd (struct passwd * pw) {
 	else
 		pw->pw_shell = "/system/bin/sh";
 
-	pw->pw_dir = "/data/data/com.termux/files/home";
+	pw->pw_dir = "/sdcard";
 	pw->pw_passwd = "*";
 	pw->pw_gecos = ""; /* Avoid NULL field. */
+}
+

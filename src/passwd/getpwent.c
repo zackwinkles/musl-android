@@ -1,4 +1,5 @@
 #include "pwf.h"
+#include "android.h"
 
 static FILE *f;
 static char *line;
@@ -24,14 +25,31 @@ struct passwd *getpwent()
 
 struct passwd *getpwuid(uid_t uid)
 {
+#if defined(__ANDROID__)
+	struct passwd* res;
+	__getpw_a(0, uid, &pw, &line, &size, &res);
+	if (res == NULL) return NULL;
+	__android_setup_pwd(res);
+	return res;
+#else
 	struct passwd *res;
 	__getpw_a(0, uid, &pw, &line, &size, &res);
 	return res;
+#endif
 }
 
 struct passwd *getpwnam(const char *name)
 {
+#if defined(__ANDROID__)
+	struct passwd* res;
+	__getpw_a(name, 0, &pw, &line, &size, &res);
+	if (res == NULL) return NULL;
+	__android_setup_pwd(res);
+	return res;
+#else
 	struct passwd *res;
 	__getpw_a(name, 0, &pw, &line, &size, &res);
 	return res;
+#endif
 }
+
