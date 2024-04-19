@@ -34,8 +34,9 @@ CRT_OBJS = $(filter obj/crt/%,$(ALL_OBJS))
 
 AOBJS = $(LIBC_OBJS)
 LOBJS = $(LIBC_OBJS:.o=.lo)
-GENH = obj/include/bits/alltypes.h obj/include/bits/syscall.h
+GENH = obj/include/paths.h obj/include/bits/alltypes.h obj/include/bits/syscall.h
 GENH_INT = obj/src/internal/version.h
+GENH_PATH = obj/include/paths.h obj/src/include/paths.h
 IMPH = $(addprefix $(srcdir)/, src/internal/stdio_impl.h src/internal/pthread_impl.h src/internal/locale_impl.h src/internal/libc.h)
 
 LDFLAGS =
@@ -90,9 +91,9 @@ else
 
 all: $(ALL_LIBS) $(ALL_TOOLS)
 
-OBJ_DIRS = $(sort $(patsubst %/,%,$(dir $(ALL_LIBS) $(ALL_TOOLS) $(ALL_OBJS) $(GENH) $(GENH_INT))) obj/include)
+OBJ_DIRS = $(sort $(patsubst %/,%,$(dir $(ALL_LIBS) $(ALL_TOOLS) $(ALL_OBJS) $(GENH) $(GENH_INT) $(GENH_PATH))) obj/include)
 
-$(ALL_LIBS) $(ALL_TOOLS) $(ALL_OBJS) $(ALL_OBJS:%.o=%.lo) $(GENH) $(GENH_INT): | $(OBJ_DIRS)
+$(ALL_LIBS) $(ALL_TOOLS) $(ALL_OBJS) $(ALL_OBJS:%.o=%.lo) $(GENH) $(GENH_INT) $(GENH_PATH): | $(OBJ_DIRS)
 
 $(OBJ_DIRS):
 	mkdir -p $@
@@ -104,10 +105,20 @@ obj/include/bits/syscall.h: $(srcdir)/arch/$(ARCH)/bits/syscall.h.in
 	cp $< $@
 	sed -n -e s/__NR_/SYS_/p < $< >> $@
 
+$(GENH_PATH): $(sort $(patsubst obj/%,$(srcdir)/%.in,$(GENH_PATH)))
+	sed -e s,__HOMEDIR__,$(HOME),g \
+	   -e s,__PREFIX__,$(prefix),g \
+	   -e s,__EXEC_PREFIX__,$(exec_prefix),g \
+	   -e s,__BINDIR__,$(bindir),g \
+	   -e s,__LIBDIR__,$(libdir),g \
+	   -e s,__SYSLIBDIR__,$(syslibdir),g \
+	   -e s,__SYSCONFDIR__,$(sysconfdir),g \
+	   $< > $@
+
 obj/src/internal/version.h: $(wildcard $(srcdir)/VERSION $(srcdir)/.git)
 	printf '#define VERSION "%s"\n' "$$(cd $(srcdir); sh tools/version.sh)" > $@
 
-obj/src/internal/version.o obj/src/internal/version.lo: obj/src/internal/version.h
+obj/src/internal/version.o obj/src/internal/version.lo_PATH_TMP           "__HOMEDIR__/tmp/": obj/src/internal/version.h
 
 obj/crt/rcrt1.o obj/ldso/dlstart.lo obj/ldso/dynlink.lo: $(srcdir)/src/internal/dynlink.h $(srcdir)/arch/$(ARCH)/reloc.h
 

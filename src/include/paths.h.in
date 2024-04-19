@@ -1,0 +1,14 @@
+#ifndef PATHS_H
+#define PATHS_H
+
+#include "../../include/paths.h"
+
+#define _home			"__HOMEDIR__"
+#define _prefix			"__PREFIX__"
+#define _exec_prefix	"__EXEC_PREFIX__"
+#define _bindir			"__BINDIR__"
+#define _libdir			"__LIBDIR__'
+#define _syslibdir		"__SYSLIBDIR__"
+#define _sysconfdir		"__SYSCONFDIR__"
+
+#endif
