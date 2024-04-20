@@ -1,31 +1,41 @@
-#ifndef _SYS_CDEFS_H_
-#define _SYS_CDEFS_H_
+#ifndef _SYS_CDEFS_H
+#define _SYS_CDEFS_H
 
-#warning usage of non-standard #include <sys/cdefs.h> is deprecated
-
-#undef __P
-#undef __PMT
-
-#define __P(args)	args
-#define __PMT(args)	args
-
-#define __CONCAT(x,y)	x ## y
-#define __STRING(x)	#x
-
-#ifdef  __cplusplus
-# define __BEGIN_DECLS	extern "C" {
-# define __END_DECLS	}
+#if defined(__cplusplus)
+#define __BEGIN_DECLS extern "C" {
+#define __END_DECLS }
 #else
-# define __BEGIN_DECLS
-# define __END_DECLS
+#define __BEGIN_DECLS
+#define __END_DECLS
 #endif
 
-#if defined(__GNUC__) && !defined(__cplusplus)
-# define __THROW	__attribute__ ((__nothrow__))
-# define __NTH(fct)	__attribute__ ((__nothrow__)) fct
-#else
-# define __THROW
-# define __NTH(fct)     fct
+#if 0
+#define __strong_alias(alias, sym) \
+    __asm__(".global " #alias "\n" \
+            #alias " = " #sym);
 #endif
 
-#endif /* _SYS_CDEFS_H_ */
+#if defined(__cplusplus)
+#define	__inline	inline		/* convert to C++ keyword */
+#endif /* !__cplusplus */
+
+/**
+ * Some BSD source needs these macros.  Originally they embedded 
+ * the rcs versions of each source file in the generated binary.
+ */
+#define __IDSTRING(_prefix,_s) /* nothing */
+#define __COPYRIGHT(_s) /* nothing */
+#define __FBSDID(_s) /* nothing */
+#define __RCSID(_s) /* nothing */
+#define __SCCSID(_s) /* nothing */
+
+/**
+ * glibc compatibility.
+ */
+#if defined(__LP64__)
+#define __WORDSIZE 64
+#else
+#define __WORDSIZE 32
+#endif
+
+#endif
