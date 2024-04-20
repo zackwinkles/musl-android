@@ -28,5 +28,12 @@
 
 #pragma once
 
-#include_next <resolv.h>
-#include <bionic/b64.h>
+#include <sys/cdefs.h>
+#include <sys/types.h>
+
+__BEGIN_DECLS
+
+int b64_ntop(unsigned char const* __src, size_t __src_size, char* __dst, size_t __dst_size);
+int b64_pton(char const* __src, u_char* __dst, size_t __dst_size);
+
+__END_DECLS
