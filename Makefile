@@ -146,6 +146,10 @@ $(CRT_OBJS): CFLAGS_ALL += -DCRT -fno-lto
 
 $(LOBJS) $(LDSO_OBJS): CFLAGS_ALL += -fPIC
 
+obj/src/malloc/mimalloc/%.o: CFLAGS_ALL += -std=c11 -ftls-model=local-dynamic -fvisibility=hidden -fno-builtin-malloc -DMI_PADDING=0 -DMI_XMALLOC=1 -DMI_SHOW_ERRORS=1 -DMI_NO_THP=1 -DMI_LIBC_MUSL=1 -DMI_STATIC_LIB=1 -DMI_OVERRIDE=1
+
+obj/src/malloc/mimalloc/%.lo: CFLAGS_ALL += -std=c11 -ftls-model=local-dynamic -fvisibility=hidden -fno-builtin-malloc -DMI_PADDING=0 -DMI_XMALLOC=1 -DMI_SHOW_ERRORS=1 -DMI_NO_THP=1 -DMI_LIBC_MUSL=1 -DMI_SHARED_LIB=1 -DMI_SHARED_LIB_EXPORT=1 -DMI_OVERRIDE=1
+
 CC_CMD = $(CC) $(CFLAGS_ALL) -c -o $@ $<
 
 # Choose invocation of assembler to be used
