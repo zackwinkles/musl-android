@@ -118,7 +118,7 @@ $(GENH_PATH): $(sort $(patsubst obj/%,$(srcdir)/%.in,$(GENH_PATH)))
 obj/src/internal/version.h: $(wildcard $(srcdir)/VERSION $(srcdir)/.git)
 	printf '#define VERSION "%s"\n' "$$(cd $(srcdir); sh tools/version.sh)" > $@
 
-obj/src/internal/version.o obj/src/internal/version.lo_PATH_TMP           "__HOMEDIR__/tmp/": obj/src/internal/version.h
+obj/src/internal/version.o obj/src/internal/version.lo: obj/src/internal/version.h
 
 obj/crt/rcrt1.o obj/ldso/dlstart.lo obj/ldso/dynlink.lo: $(srcdir)/src/internal/dynlink.h $(srcdir)/arch/$(ARCH)/reloc.h
 
