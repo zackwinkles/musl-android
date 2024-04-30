@@ -166,6 +166,7 @@ static void (*exe_dl_debug_state)(void) = 0;
 extern weak hidden char __ehdr_start[];
 
 extern hidden int __malloc_replaced;
+extern hidden int __malloc_process_init();
 
 hidden void (*const __init_array_start)(void)=0, (*const __fini_array_start)(void)=0;
 
@@ -1665,6 +1666,11 @@ static void do_init_fini(struct dso **queue)
 
 void __libc_start_init(void)
 {
+	/* Initialize pre process structure of malloc implementation */
+	if (__malloc_process_init() < 0) {
+		dprintf(2, "failed to initialize malloc\n");
+		_exit(127);
+	}
 	do_init_fini(main_ctor_queue);
 	if (!__malloc_replaced && main_ctor_queue != builtin_ctor_queue)
 		free(main_ctor_queue);
@@ -2008,6 +2014,12 @@ void __dls3(size_t *sp, size_t *auxv)
 	/* Donate unused parts of app and library mapping to malloc */
 	reclaim_gaps(&app);
 	reclaim_gaps(&ldso);
+
+	/* Initialize pre process structure of malloc implementation */
+	if (__malloc_process_init() < 0) {
+		dprintf(2, "%s: failed to initialize malloc\n", argv[0]);
+		_exit(127);
+	}
 
 	/* Load preload/needed libraries, add symbols to global namespace. */
 	ldso.deps = (struct dso **)no_deps;
