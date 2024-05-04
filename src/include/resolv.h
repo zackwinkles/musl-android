@@ -2,7 +2,6 @@
 #define RESOLV_H
 
 #include "../../include/resolv.h"
-#include <bionic/b64.h>
 
 hidden int __dn_expand(const unsigned char *, const unsigned char *, const unsigned char *, char *, int);
 
